@@ -4,6 +4,7 @@ $ = require('gulp-load-plugins')()
 paths =
   coffee: ['./app/**/*.coffee']
 
+gulp.task 'build', ['coffee']
 gulp.task 'default', ['coffee', 'watch']
 
 gulp.task 'coffee', ->
