@@ -2,6 +2,7 @@ express = require 'express'
 logger = require 'morgan'
 mongoose = require 'mongoose'
 bodyParser = require 'body-parser'
+cors = require 'cors'
 
 app = express()
 
@@ -13,7 +14,9 @@ app.use bodyParser.urlencoded extended: false
 # middleware
 middleware = require './config/middleware'
 app.use middleware.beforeAll
-app.use middleware.cors
+
+# Enable cors
+app.use cors()
 
 # link to the routes file which links to all the individual routes
 require('./config/routes')(app)
