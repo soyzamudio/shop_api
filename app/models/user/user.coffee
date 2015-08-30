@@ -1,4 +1,7 @@
 mongoose = require 'mongoose'
+bcrypt = require 'bcrypt'
+moment = require 'moment'
+jwt = require 'jwt-simple'
 
 userSchema = new mongoose.Schema
   username:
@@ -6,6 +9,9 @@ userSchema = new mongoose.Schema
     required: true
   password:
     type: String
+  email:
+    type: String
+    required: true
   twitter:
     type: String
   facebook:
@@ -14,9 +20,32 @@ userSchema = new mongoose.Schema
     type: Date
     default: Date.now
 
-userSchema.statics.create = (payload, cb) ->
-  console.log payload
-  user = new User payload
-  user.save cb null, user
+userSchema.methods.token = ->
+  console.log @
+  payload =
+    sub: @._id
+    iat: moment().unix()
+    exp: moment().add(10, 'days').unix()
 
-module.exports = mongoose.model 'User', userSchema
+  jwt.encode payload, process.env.TOKEN_SECRET
+
+userSchema.statics.register = (o, cb) ->
+  User.findOne
+    email: o.email
+  , (err, u) ->
+    if u then return cb true
+    user = new User o
+    user.password = bcrypt.hashSync o.password, 8
+    user.save(cb)
+
+userSchema.statics.authenticate = (o, cb) ->
+  User.findOne
+    email: o.email
+  , (err, user) ->
+    if not user then return cb true
+    isGood = bcrypt.compareSync o.password, user.password
+    if not isGood then return cb true
+    cb null, user
+
+User = mongoose.model 'User', userSchema
+module.exports = User
