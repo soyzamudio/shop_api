@@ -20,32 +20,25 @@ userSchema = new mongoose.Schema
     type: Date
     default: Date.now
 
-userSchema.methods.token = ->
-  console.log @
-  payload =
-    sub: @._id
-    iat: moment().unix()
-    exp: moment().add(10, 'days').unix()
+userSchema.pre 'save', (next) ->
+  user = @
+  if not user.isModified 'password' then return next()
+  bcrypt.genSalt 10, (err, salt) ->
+    bcrypt.hash user.password, salt, (err, hash) ->
+      user.password = hash
+      next()
 
+userSchema.statics.createJWT = (user) ->
+  payload =
+    sub: user._id
+    iat: moment().unix()
+    exp: moment().add(14, 'days').unix()
   jwt.encode payload, process.env.TOKEN_SECRET
 
-userSchema.statics.register = (o, cb) ->
-  User.findOne
-    email: o.email
-  , (err, u) ->
-    if u then return cb true
-    user = new User o
-    user.password = bcrypt.hashSync o.password, 8
-    user.save(cb)
-
-userSchema.statics.authenticate = (o, cb) ->
-  User.findOne
-    email: o.email
-  , (err, user) ->
-    if not user then return cb true
-    isGood = bcrypt.compareSync o.password, user.password
-    if not isGood then return cb true
-    cb null, user
+userSchema.methods.comparePassword = (password, done) ->
+  isGood = bcrypt.compareSync password, @.password
+  if not isGood then return done true
+  done null, isGood
 
 User = mongoose.model 'User', userSchema
 module.exports = User

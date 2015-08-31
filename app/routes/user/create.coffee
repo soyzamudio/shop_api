@@ -1,11 +1,12 @@
 User = require '../../models/user/user'
 
 module.exports = (req, res) ->
-  console.log req.body
-  User.register req.body, (err, user) ->
-    if err or not user then res.send 401
-    token = user.token()
-    user.password = null
-    res.send
-      token: token
-      user: user
+  User.findOne username: req.body.username, (err, existingUser) ->
+    if existingUser
+      return res.status(409).send message: 'Username is already taken'
+    user = new User req.body
+    user.save ->
+      user.password = null
+      res.send
+        user: user
+        token: User.createJWT user
